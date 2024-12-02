@@ -15,6 +15,7 @@ from adaflow.gym_util.multistep_wrapper import MultiStepWrapper
 from adaflow.gym_util.video_recording_wrapper import VideoRecordingWrapper, VideoRecorder
 from adaflow.model.common.rotation_transformer import RotationTransformer
 from omegaconf import OmegaConf
+import time
 
 from adaflow.policy.base_image_policy import BaseImagePolicy
 from adaflow.common.pytorch_util import dict_apply
@@ -289,7 +290,7 @@ class RobomimicImageRunner(BaseImageRunner):
         # allocate data
         all_video_paths = [None] * n_inits
         all_rewards = [None] * n_inits
-
+        total_times = 0
         for chunk_idx in range(n_chunks):
             start = chunk_idx * n_envs
             end = min(n_inits, start + n_envs)
@@ -315,7 +316,8 @@ class RobomimicImageRunner(BaseImageRunner):
             env_name = self.env_meta['env_name']
             pbar = tqdm.tqdm(total=self.max_steps, desc=f"Eval {env_name}Image {chunk_idx+1}/{n_chunks}", 
                 leave=False, mininterval=self.tqdm_interval_sec)
-            
+            avg_inference_time = 0
+            num_inferences = 0
             done = False
             while not done:
                 # create obs dict
@@ -331,9 +333,12 @@ class RobomimicImageRunner(BaseImageRunner):
                         device=device))
 
                 # run policy
+                start = time.time()
                 with torch.no_grad():
                     action_dict = policy.predict_action(obs_dict)
-
+                inference_time = time.time() - start
+                avg_inference_time += inference_time
+                num_inferences +=1
                 # device_transfer
                 np_action_dict = dict_apply(action_dict,
                     lambda x: x.detach().to('cpu').numpy())
@@ -365,7 +370,8 @@ class RobomimicImageRunner(BaseImageRunner):
                 # update pbar
                 pbar.update(action.shape[1])
             pbar.close()
-
+            avg_inference_time/=num_inferences
+            total_times += avg_inference_time
             # collect data for this round
             all_video_paths[this_global_slice] = env.render()[this_local_slice]
             all_rewards[this_global_slice] = env.call('get_attr', 'reward')[this_local_slice]
@@ -384,6 +390,8 @@ class RobomimicImageRunner(BaseImageRunner):
         # for i in range(len(self.env_fns)):
         # and comment out this line
         success_rate = sum([np.max(all_rewards[i]) > 0 for i in range(n_inits)]) / n_inits
+        total_avg_inference_time = total_times/n_chunks
+        print(f"Avg Inference Time {total_avg_inference_time}")
         print(f"Success rate: {success_rate}")
         for i in range(n_inits):
             seed = self.env_seeds[i]
@@ -398,6 +406,7 @@ class RobomimicImageRunner(BaseImageRunner):
                 sim_video = wandb.Video(video_path)
                 log_data[prefix+f'sim_video_{seed}'] = sim_video
         log_data['success_rate'] = success_rate
+        log_data['Average Inference Time'] = total_avg_inference_time
         # log aggregate metrics
         for prefix, value in max_rewards.items():
             name = prefix+'mean_score'

@@ -83,14 +83,16 @@ class TrainDiffusionUnetImageWorkspace(BaseWorkspace):
         if cfg.training.use_ema:
             self.ema_model.set_normalizer(normalizer)
 
+        if cfg.training.max_train_steps is None:
+            num_training_steps = (len(train_dataloader) * cfg.training.num_epochs) // cfg.training.gradient_accumulate_every
+        else:
+            num_training_steps = (cfg.training.max_train_steps * cfg.training.num_epochs) // cfg.training.gradient_accumulate_every
         # configure lr scheduler
         lr_scheduler = get_scheduler(
             cfg.training.lr_scheduler,
             optimizer=self.optimizer,
             num_warmup_steps=cfg.training.lr_warmup_steps,
-            num_training_steps=(
-                len(train_dataloader) * cfg.training.num_epochs) \
-                    // cfg.training.gradient_accumulate_every,
+            num_training_steps=num_training_steps,
             # pytorch assumes stepping LRScheduler every epoch
             # however huggingface diffusers steps it every batch
             last_epoch=self.global_step-1
