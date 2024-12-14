@@ -66,7 +66,8 @@ dataloader:
   num_workers: 4
   shuffle: True
   pin_memory: True
-  persistent_workers: False
+  persistent_workers: True
+  timeout: 120
 
 val_dataloader:
   batch_size: 64
@@ -99,9 +100,9 @@ training:
   freeze_encoder: False
   # training loop control
   # in epochs
-  rollout_every: 200
+  rollout_every: 25
   checkpoint_every: 200
-  val_every: 1
+  val_every: 200
   sample_every: 5
   # steps per epoch
   max_train_steps: 500
@@ -123,20 +124,20 @@ checkpoint:
   topk:
     monitor_key: test_mean_score
     mode: max
-    k: 1
+    k: 6
     format_str: 'epoch={epoch:04d}-test_mean_score={test_mean_score:.3f}.ckpt'
   save_last_ckpt: True
   save_last_snapshot: False
 
 multi_run:
-  run_dir: /mnt/data0/abhim/exps/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_${dataset_type}
+  run_dir: /data1/abhim/exps/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_${dataset_type}
   wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}_${dataset_type}
 
 hydra:
   job:
     override_dirname: ${name}
   run:
-    dir: /mnt/data0/abhim/exps/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_${dataset_type}
+    dir: /data1/abhim/exps/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_${dataset_type}
   sweep:
-    dir: /mnt/data0/abhim/exps/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_${dataset_type}
+    dir: /data1/abhim/exps/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}_${dataset_type}
     subdir: ${hydra.job.num}

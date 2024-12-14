@@ -19,20 +19,18 @@ shape_meta: &shape_meta
   action: 
     shape: [12]
 
-task_name: &task_name PnPCounterToCab
-dataset_path: &dataset_path /mnt/nfs_client/robocasa/datasets/v0.1/single_stage/kitchen_pnp/PnPCounterToCab/mg/2024-05-04-22-12-27_and_2024-05-07-07-39-33/demo_gentex_im128_randcams.hdf5
-dataset_type: &dataset_type robocasa_hdf5_image
+dataset_path: &dataset_path /data1/abhim/datasets/CounterToCab/demo_gentex_im128_randcams.hdf5 
 abs_action: &abs_action False
 
 env_runner:
-  _target_: adaflow.env_runner.robomimic_image_runner.RobomimicImageRunner
+  _target_: diffusion_policy.env_runner.robomimic_image_runner.RobomimicImageRunner
   dataset_path: *dataset_path
   shape_meta: *shape_meta
   # costs 1GB per env
   n_train: 1
   n_train_vis: 1
   train_start_idx: 0
-  n_test: 50
+  n_test: 25
   n_test_vis: 4
   test_start_seed: 100000
   max_steps: 600
@@ -47,7 +45,7 @@ env_runner:
   n_envs: 1
 
 dataset:
-  _target_: adaflow.dataset.robomimic_hdf5_image_dataset.RobomimicHDF5ImageDataset
+  _target_: diffusion_policy.dataset.robomimic_hdf5_image_dataset.RobomimicHDF5ImageDataset
   shape_meta: *shape_meta
   dataset_path: *dataset_path
   horizon: ${horizon}
